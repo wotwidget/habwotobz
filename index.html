@@ -16,7 +16,6 @@
       padding:18px;
     }
 
-    /* 3×120px + проміжки */
     .wrap{width:380px; margin:0 auto}
 
     .header{
@@ -31,7 +30,6 @@
       font-size:58px; line-height:.9; letter-spacing:1px;
       z-index:1;
     }
-    /* ТАНК DRAVEC */
     .tank{
       position:absolute;
       right:20px;
@@ -51,22 +49,23 @@
     }
 
     .card{
+      position:relative;
       background:rgba(0,0,0,0.6);
       border:2px solid var(--stroke); border-radius:14px;
       padding:10px 10px;
       width:120px;
       height:250px;
       display:flex; flex-direction:column; justify-content:space-between;
+      overflow:hidden;
     }
     .card .head{
       font-weight:800; font-size:16px; margin-bottom:8px;
-      text-align:center;               /* Вирівнювання заголовків по центру */
+      text-align:center;
     }
 
     .details{font-size:11px; line-height:1.24; color:#ccc; margin-bottom:6px;}
     .gold-text{color:#ffcc00; font-weight:600;}
 
-    /* рядок з галочками — більші і по центру */
     .checks{
       display:flex;
       gap:14px;
@@ -96,7 +95,28 @@
 
     .bar{height:8px; width:100%; border-radius:999px; background:var(--track); overflow:hidden; margin-top:8px;}
     .bar>span{display:block; height:100%; width:0%; background:var(--accent); transition:width .6s ease}
-    .bar.total>span{background:#0fa8ab;}  /* бірюзовий підсумковий бар */
+    .bar.total>span{background:#0fa8ab;}
+
+    /* ===== СТАТУС "ВИКОНАНО" ===== */
+    .card.done{
+      border-color:#0d7529;
+      background-image: repeating-linear-gradient(45deg,
+        rgba(124,255,43,0.12) 0px, rgba(124,255,43,0.12) 10px,
+        rgba(124,255,43,0.02) 10px, rgba(124,255,43,0.02) 20px);
+    }
+    .card.done::after{
+      content:"Виконано";
+      position:absolute; top:35%; left:50%;
+      transform:translate(-50%,-50%) rotate(-45deg);
+      padding:6px 20px;
+      background:rgba(124,255,43,.18);
+      border:2px solid rgba(124,255,43,.6);
+      color:#baff7d; font-weight:800; letter-spacing:.5px; font-size:14px;
+      text-shadow:0 0 6px rgba(124,255,43,.35);
+      border-radius:12px;
+      pointer-events:none;
+      white-space:nowrap;
+    }
   </style>
 </head>
 <body>
@@ -108,7 +128,7 @@
 
     <div class="grid">
       <!-- Авангард -->
-      <div class="card">
+      <div class="card" id="card-avg">
         <div>
           <div class="head">Авангард</div>
           <div class="details">
@@ -129,7 +149,7 @@
       </div>
 
       <!-- Засідка -->
-      <div class="card">
+      <div class="card" id="card-zas">
         <div>
           <div class="head">Засідка</div>
           <div class="details">
@@ -149,7 +169,7 @@
       </div>
 
       <!-- Підтримка -->
-      <div class="card">
+      <div class="card" id="card-pid">
         <div>
           <div class="head">Підтримка</div>
           <div class="details">Легкий танк<br>САУ</div>
@@ -176,10 +196,9 @@
   </div>
 
   <script>
-    // Налаштування аркуша
     const SHEET_ID   = '1yrts1hMSYTCQ2rHR8IvgkvdxR4Z9v3ba1oPxlW-6XGc';
     const SHEET_NAME = 'DRAVEC';
-    const CHK_ROW    = 3;            // рядок із чекбоксами (B3..G3)
+    const CHK_ROW    = 3;
     const MAX_CARD   = 15, MAX_TOTAL = 45, INTERVAL_MS = 15000;
 
     const toNum = v => (typeof v==='number') ? v :
@@ -209,6 +228,11 @@
       e2.title = v2 ? 'Увімкнено' : 'Вимкнено';
     }
 
+    function markDone(cardEl, value, chk1, chk2){
+      const isDone = (toNum(value) === MAX_CARD) && (chk1 === true) && (chk2 === true);
+      cardEl.classList.toggle('done', isDone);
+    }
+
     async function update(){
       try{
         const [B2, D2, F2] = await Promise.all([fetchCell('B2'), fetchCell('D2'), fetchCell('F2')]);
@@ -219,7 +243,6 @@
         setBar('n-pid','b-pid',F2,MAX_CARD);
         setBar('n-total','b-total',I2,MAX_TOTAL);
 
-        // Чекбокси: B3,C3; D3,E3; F3,G3
         const [B3,C3,D3,E3,F3,G3] = await Promise.all([
           fetchCell(`B${CHK_ROW}`), fetchCell(`C${CHK_ROW}`),
           fetchCell(`D${CHK_ROW}`), fetchCell(`E${CHK_ROW}`),
@@ -229,6 +252,10 @@
         setChecks('avg-c1', B3 === true, 'avg-c2', C3 === true);
         setChecks('zas-c1', D3 === true, 'zas-c2', E3 === true);
         setChecks('pid-c1', F3 === true, 'pid-c2', G3 === true);
+
+        markDone(document.getElementById('card-avg'), B2, B3 === true, C3 === true);
+        markDone(document.getElementById('card-zas'), D2, D3 === true, E3 === true);
+        markDone(document.getElementById('card-pid'), F2, F3 === true, G3 === true);
       }catch(e){
         console.error(e);
       }
